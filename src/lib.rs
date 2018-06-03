@@ -187,13 +187,13 @@ pub trait TablePlugin: Plugin {
 
         for column in self.columns() {
             let mut map = BTreeMap::new();
-            map.insert("id", "column".to_string());
-            map.insert("name", column.column_name);
-            map.insert("type", column.column_type.to_string());
-            map.insert("op", "0".to_string());
+            map.insert("id".to_string(), "column".to_string());
+            map.insert("name".to_string(), column.column_name);
+            map.insert("type".to_string(), column.column_type.to_string());
+            map.insert("op".to_string(), "0".to_string());
             routes.push(map);
         }
-        ExtensionResponse::new(status, vec![])
+        ExtensionResponse::new(status, routes)
     }
 
     fn call(&self, ctx: ExtensionPluginRequest) -> ExtensionResponse {
@@ -230,14 +230,63 @@ pub trait TablePlugin: Plugin {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
+    struct TestTable;
+    impl ::Plugin for TestTable {
+        fn name(&self) -> String {
+            "test_thing123".to_string()
+        }
+    }
+
+    impl ::TablePlugin for TestTable {
+
+        fn columns(&self) -> Vec<::ColumnDefinition> {
+            vec![
+                ::ColumnDefinition {
+                    column_name: "first_col".to_string(),
+                    column_type: ::ColumnType::Integer
+                },
+                ::ColumnDefinition {
+                    column_name: "second_col".to_string(),
+                    column_type: ::ColumnType::Double
+                },
+            ]
+        }
+
+        fn generate(&self, query_context: Option<String>) -> ::osquery::ExtensionResponse {
+            let status = ::osquery::ExtensionStatus::new(0, "OK".to_string(), None);
+            let mut map1 = std::collections::BTreeMap::new();
+            map1.insert("first_col".to_string(), "1234".to_string());
+            map1.insert("second_col".to_string(), "789".to_string());
+            let mut map2 = std::collections::BTreeMap::new();
+            map2.insert("first_col".to_string(), "9876".to_string());
+            map2.insert("second_col".to_string(), "54321".to_string());
+
+            let rows = vec![
+                map1,
+                map2
+            ];
+            ::osquery::ExtensionResponse::new(status, rows)
+        }
+    }
+
     #[test]
     fn test_it() {
+        use std::collections::BTreeMap;
         use ::osquery::TExtensionManagerSyncClient;
+        use ::TablePlugin;
 
         let mut client = super::ExtensionManagerClientFactory::create_with_path("/Users/zbrown/.osquery/shell.em", None);
-        println!("{:#?}", client.options());
-        println!("{:#?}", client.extensions());
-        println!("{:#?}", client.query("select * from processes;".to_string()));
-        println!("{:#?}", client.get_query_columns("select * from processes;".to_string()));
+        let ext_info = ::osquery::InternalExtensionInfo::new("test_thing123".to_string(), None, None, None);
+
+        let mut extension_registry: ::osquery::ExtensionRegistry = BTreeMap::new();
+        let mut extension_routes: ::osquery::ExtensionRouteTable = BTreeMap::new();
+
+        let table_plugin = TestTable {};
+        extension_routes.insert("test_thing123".to_string(), table_plugin.routes().response.unwrap());
+        extension_registry.insert("table".to_string(), extension_routes);
+
+        client.register_extension(ext_info, extension_registry);
     }
 }
