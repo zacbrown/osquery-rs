@@ -1,0 +1,16 @@
+[package]
+name = "osquery-rs"
+version = "0.1.0"
+authors = ["Zac Brown <zacbrown@users.noreply.github.com>"]
+
+[dependencies]
+ordered-float = "0.5.0"
+thrift = { git = "https://github.com/zacbrown/thrift" }
+try_from = "0.2.2"
+uuid = { version = "0.6", features = ["v4"] }
+
+[target.'cfg(target_family = "unix")'.dependencies]
+unix_socket = "0.5.0"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+named_pipe = "0.3.0"
