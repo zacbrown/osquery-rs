@@ -70,7 +70,6 @@ mod sys {
 type ProtocolIn = TBinaryInputProtocol<TBufferedReadTransport<sys::TChannel>>;
 type ProtocolOut = TBinaryOutputProtocol<TBufferedWriteTransport<sys::TChannel>>;
 
-// TODO: Once we implement wrapping the thrift-generated client, exposes as pub.
 pub struct ExtensionManagerClient {
     client: osquery::ExtensionManagerSyncClient<ProtocolIn, ProtocolOut>
 }
@@ -428,8 +427,6 @@ impl ExtensionManagerServer {
                 }
             }
         }
-        println!("beep beep");
-        std::thread::sleep_ms(5000);
     }
 }
 
