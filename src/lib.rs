@@ -254,7 +254,7 @@ impl ExtensionManagerServer {
 
             registry.insert(plugin_type.clone(), plugin_mapping);
         }
-
+        debug_println!("Generated Registry:\n{:#?}", registry);
         registry
     }
 
