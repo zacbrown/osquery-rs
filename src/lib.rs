@@ -7,52 +7,54 @@ extern crate uuid;
 #[cfg(target_family = "unix")]
 extern crate unix_socket;
 
+#[macro_use]
+mod macros {
+    #[macro_export]
+    macro_rules! debug_println {
+        () => (if cfg!(debug_assertions) { print!("\n") });
+        ($fmt:expr) => (if cfg!(debug_assertions) { print!(concat!($fmt, "\n")) });
+        ($fmt:expr, $($arg:tt)*) => (if cfg!(debug_assertions) { print!(concat!($fmt, "\n"), $($arg)*) });
+    }
+}
+
 // Auto-generated bindings from Thrift.
 pub mod osquery;
+use osquery::*;
+
+pub mod stop_signal;
+use stop_signal::*;
+
+mod local_server;
+use local_server::*;
+
+pub mod config_plugin;
+pub use self::config_plugin::*;
+
+pub mod table_plugin;
+pub use self::table_plugin::*;
+
 
 use std::collections::BTreeMap;
 use std::sync::{
     Arc,
-    Condvar,
     Mutex,
-    MutexGuard
 };
 
-use threadpool::ThreadPool;
-
-use thrift::{
-    ApplicationError,
-    ApplicationErrorKind
-};
 use thrift::protocol::{
     TBinaryInputProtocol,
     TBinaryInputProtocolFactory,
     TBinaryOutputProtocol,
     TBinaryOutputProtocolFactory,
-    TInputProtocolFactory,
-    TOutputProtocolFactory,
-    TInputProtocol,
-    TOutputProtocol,
 };
 use thrift::transport::{
-    TBufferChannel,
     TBufferedReadTransport,
     TBufferedReadTransportFactory,
     TBufferedWriteTransport,
     TBufferedWriteTransportFactory,
-    TReadTransportFactory,
-    TWriteTransportFactory,
-    TIoChannel,
 };
-
-use thrift::server::{
-    TProcessor,
-};
-
-use osquery::*;
 
 #[cfg(target_family = "unix")]
-mod sys {
+pub mod sys {
     extern crate unix_socket;
 
     pub const DEFAULT_PIPE_PATH: &'static str ="/var/osquery/osquery.em";
@@ -61,68 +63,11 @@ mod sys {
 }
 
 #[cfg(target_os = "windows")]
-mod sys {
+pub mod sys {
     extern crate named_pipe;
 
     pub const DEFAULT_PIPE_PATH: &'static str = r#"\\.\pipe\osquery.em"#;
     // pub type TChannel = ...
-}
-
-#[derive(Clone)]
-pub struct StopSignal {
-    signal: Arc<(Mutex<bool>, Condvar)>,
-}
-
-impl StopSignal {
-    pub fn new() -> Self {
-        Self {
-            signal: Arc::new((Mutex::new(false), Condvar::new()))
-        }
-    }
-
-    pub fn wait(&self) {
-        let &(ref lock, ref cvar) = &*self.signal;
-        let mut finished = lock.lock().unwrap();
-        while !*finished {
-            finished = match cvar.wait(finished) {
-                Ok(f) => f,
-                Err(_) => { break } // wire this up to the Health API
-            }
-        }
-    }
-
-    pub fn wait_timeout(&self, duration: std::time::Duration) -> bool {
-        let &(ref lock, ref cvar) = &*self.signal;
-        let mut finished = lock.lock().unwrap();
-        let mut signaled = false;
-        while !*finished {
-            finished = match cvar.wait_timeout(finished, duration) {
-                Ok((done, timeout_result)) => {
-                    if timeout_result.timed_out() {
-                        break
-                    }
-                    signaled = true;
-                    done
-                },
-                Err(_) => { break } // wire this up to the Health API
-            }
-        }
-
-        signaled
-    }
-
-    pub fn done(&self) {
-        let &(ref lock, ref cvar) = &*self.signal;
-        let mut finished = lock.lock().unwrap();
-        *finished = true;
-        cvar.notify_all();
-    }
-
-    pub fn reset(&self) {
-        let &(ref lock, _) = &*self.signal;
-        let mut finished = lock.lock().unwrap();
-        *finished = false;
-    }
 }
 
 type ProtocolIn = TBinaryInputProtocol<TBufferedReadTransport<sys::TChannel>>;
@@ -244,137 +189,6 @@ impl ExtensionSyncHandler for ExtensionClientHandler {
     }
 }
 
-#[derive(Debug)]
-pub struct TServer<PRC, RTF, IPF, WTF, OPF>
-    where
-        PRC: TProcessor + Send + Sync + 'static,
-        RTF: TReadTransportFactory + 'static,
-        IPF: TInputProtocolFactory + 'static,
-        WTF: TWriteTransportFactory + 'static,
-        OPF: TOutputProtocolFactory + 'static,
-{
-    r_trans_factory: RTF,
-    i_proto_factory: IPF,
-    w_trans_factory: WTF,
-    o_proto_factory: OPF,
-    processor: Arc<PRC>,
-    worker_pool: ThreadPool,
-}
-
-impl<PRC, RTF, IPF, WTF, OPF> TServer<PRC, RTF, IPF, WTF, OPF>
-    where PRC: TProcessor + Send + Sync + 'static,
-          RTF: TReadTransportFactory + 'static,
-          IPF: TInputProtocolFactory + 'static,
-          WTF: TWriteTransportFactory + 'static,
-          OPF: TOutputProtocolFactory + 'static {
-    /// Create a `TServer`.
-    ///
-    /// Each accepted connection has an input and output half, each of which
-    /// requires a `TTransport` and `TProtocol`. `TServer` uses
-    /// `read_transport_factory` and `input_protocol_factory` to create
-    /// implementations for the input, and `write_transport_factory` and
-    /// `output_protocol_factory` to create implementations for the output.
-    pub fn new(
-        read_transport_factory: RTF,
-        input_protocol_factory: IPF,
-        write_transport_factory: WTF,
-        output_protocol_factory: OPF,
-        processor: PRC,
-        num_workers: usize,
-    ) -> TServer<PRC, RTF, IPF, WTF, OPF> {
-        TServer {
-            r_trans_factory: read_transport_factory,
-            i_proto_factory: input_protocol_factory,
-            w_trans_factory: write_transport_factory,
-            o_proto_factory: output_protocol_factory,
-            processor: Arc::new(processor),
-            worker_pool: ThreadPool::with_name(
-                "Thrift service processor".to_owned(),
-                num_workers,
-            ),
-        }
-    }
-
-    fn bind(listen_address: &str) -> thrift::Result<sys::TListener> {
-        if cfg!(target_family = "unix") {
-            let socket = unix_socket::UnixListener::bind(listen_address)?;
-            Ok(socket)
-        } else {
-            unimplemented!();
-        }
-    }
-
-    pub fn listen(&mut self, listen_address: &str, done: StopSignal) -> thrift::Result<()> {
-        let mut listener = Self::bind(listen_address)?;
-        listener.set_nonblocking(true);
-        for stream in listener.incoming() {
-            match stream {
-                Ok(s) => {
-                    let (i_prot, o_prot) = self.new_protocols_for_connection(s)?;
-                    let processor = self.processor.clone();
-                    self.worker_pool
-                        .execute(move || handle_incoming_connection(processor, i_prot, o_prot),);
-                }
-                Err(e) => {
-                    //println!("WARN: failed to accept remote connection with error {:?}", e);
-                }
-            }
-            if done.wait_timeout(std::time::Duration::from_millis(100)) {
-                break
-            }
-        }
-
-        Err(
-            thrift::Error::Application(
-                ApplicationError {
-                    kind: ApplicationErrorKind::Unknown,
-                    message: "aborted listen loop".into(),
-                },
-            ),
-        )
-    }
-
-
-    fn new_protocols_for_connection(
-        &mut self,
-        stream: sys::TChannel,
-    ) -> thrift::Result<(Box<TInputProtocol + Send>, Box<TOutputProtocol + Send>)> {
-        // split it into two - one to be owned by the
-        // input tran/proto and the other by the output
-        let w_chan = stream.try_clone()?;
-        let r_chan = stream;
-
-        // input protocol and transport
-        let r_tran = self.r_trans_factory.create(Box::new(r_chan));
-        let i_prot = self.i_proto_factory.create(r_tran);
-
-        // output protocol and transport
-        let w_tran = self.w_trans_factory.create(Box::new(w_chan));
-        let o_prot = self.o_proto_factory.create(w_tran);
-
-        Ok((i_prot, o_prot))
-    }
-}
-
-fn handle_incoming_connection<PRC>(
-    processor: Arc<PRC>,
-    i_prot: Box<TInputProtocol>,
-    o_prot: Box<TOutputProtocol>,
-) where
-    PRC: TProcessor,
-{
-    let mut i_prot = i_prot;
-    let mut o_prot = o_prot;
-    loop {
-        let r = processor.process(&mut *i_prot, &mut *o_prot);
-        if let Err(e) = r {
-            //println!("WARN: processor completed with error: {:?}", e);
-            break;
-        }
-    }
-}
-
-
 pub struct ExtensionManagerServer {
     extension_name: String,
     listen_path: String,
@@ -424,7 +238,7 @@ impl ExtensionManagerServer {
             panic!("Unsupported plugin type '{}'", plugin.registry_name());
         }
 
-        let mut plugin_specific_registry = self.registry.get_mut(&plugin.registry_name()).unwrap();
+        let plugin_specific_registry = self.registry.get_mut(&plugin.registry_name()).unwrap();
         plugin_specific_registry.insert(plugin.name(), plugin);
     }
 
@@ -465,7 +279,7 @@ impl ExtensionManagerServer {
         let out_protocol_factory = TBinaryOutputProtocolFactory::new();
         let in_transport_factory = TBufferedReadTransportFactory::new();
         let in_protocol_factory = TBinaryInputProtocolFactory::new();
-        let mut server = TServer::new(
+        let mut server = LocalServer::new(
             in_transport_factory,
             in_protocol_factory,
             out_transport_factory,
@@ -477,6 +291,7 @@ impl ExtensionManagerServer {
         let done = StopSignal::new();
         let watcher_done = done.clone();
         let watcher_listen_path = self.listen_path.clone();
+        let default_duration = std::time::Duration::from_millis(500);
         std::thread::spawn(move || {
             let mut client = ExtensionManagerClient::new_with_path(&watcher_listen_path, None);
 
@@ -489,7 +304,7 @@ impl ExtensionManagerServer {
                     }
                 }
 
-                std::thread::sleep_ms(500);
+                std::thread::sleep(default_duration.clone());
             }
         });
 
@@ -510,189 +325,11 @@ pub trait Plugin: Sync + Send {
     fn routes(&self) -> ExtensionResponse;
 }
 
-pub struct ConfigPlugin {
-    details: Box<ConfigPluginDetails>,
-}
-
-pub trait ConfigPluginDetails: Sync + Send {
-    fn name(&self) -> String;
-    fn content(&self) -> ExtensionPluginResponse;
-}
-
-impl Plugin for ConfigPlugin {
-    fn name(&self) -> String {
-        self.details.name()
-    }
-
-    fn registry_name(&self) -> String {
-        "config".to_string()
-    }
-
-    fn call(&self, ctx: ExtensionPluginRequest) -> ExtensionResponse {
-        let action_key_str = "action";
-        if ctx.contains_key(action_key_str) {
-            let action = ctx.get(action_key_str).expect("'action' key expected to have value if in map.");
-            if action == "genConfig" {
-                let status = ExtensionStatus::new(0, "OK".to_string(), None);
-                return ExtensionResponse::new(status, self.details.content())
-            }
-        }
-
-        let message = "Not a valid config plugin action".to_string();
-        let status = ExtensionStatus::new(1, message, None);
-        ExtensionResponse::new(status,  vec![])
-    }
-
-    fn routes(&self) -> ExtensionResponse {
-        let status = ExtensionStatus::new(0, "OK".to_string(), None);
-        ExtensionResponse::new(status, vec![])
-    }
-}
-
-pub struct LoggerPlugin {
-    details: Box<LoggerPluginDetails>,
-}
-
-pub trait LoggerPluginDetails: Sync + Send {
-    fn name(&self) -> String;
-    fn log_string(&self, &str) -> ExtensionStatus;
-    fn log_health(&self, &str) -> ExtensionStatus;
-    fn log_snapshot(&self, &str) -> ExtensionStatus;
-}
-
-impl Plugin for LoggerPlugin {
-    fn name(&self) -> String {
-        self.details.name()
-    }
-
-    fn registry_name(&self) -> String {
-        "logger".to_string()
-    }
-
-    fn call(&self, ctx: ExtensionPluginRequest) -> ExtensionResponse {
-        if ctx.contains_key("string") {
-            let val = ctx.get("string").unwrap();
-            ExtensionResponse::new(self.details.log_string(val), vec![])
-        } else if ctx.contains_key("health") {
-            let val = ctx.get("health").unwrap();
-            ExtensionResponse::new(self.details.log_health(val), vec![])
-        } else if ctx.contains_key("snapshot") {
-            let val = ctx.get("snapshot").unwrap();
-            ExtensionResponse::new(self.details.log_snapshot(val), vec![])
-        } else if ctx.contains_key("init") {
-            let message = "Use Glog for init logging".to_string();
-            let status = ExtensionStatus::new(1, message, None);
-            ExtensionResponse::new(status, vec![])
-        } else if ctx.contains_key("status") {
-            let message = "Use Glog for status logging".to_string();
-            let status = ExtensionStatus::new(1, message, None);
-            ExtensionResponse::new(status, vec![])
-        } else {
-            let message = "Not a valid logger plugin action".to_string();
-            let status = ExtensionStatus::new(1, message, None);
-            ExtensionResponse::new(status, vec![])
-        }
-    }
-
-    fn routes(&self) -> ExtensionResponse {
-        let status = ExtensionStatus::new(0, "OK".to_string(), None);
-        ExtensionResponse::new(status, vec![])
-    }
-}
-
-pub enum ColumnType {
-    Text,
-    Integer,
-    BigInt,
-    Double,
-}
-
-impl ToString for ColumnType {
-    fn to_string(&self) -> String {
-        match &self {
-            &ColumnType::Text => "TEXT".to_string(),
-            &ColumnType::Integer => "INTEGER".to_string(),
-            &ColumnType::BigInt => "BIGINT".to_string(),
-            &ColumnType::Double => "DOUBLE".to_string(),
-        }
-    }
-}
-
-pub struct ColumnDefinition {
-    column_name: String,
-    column_type: ColumnType,
-}
-
-pub struct TablePlugin {
-    details: Box<TablePluginDetails>,
-}
-
-pub trait TablePluginDetails: Sync + Send {
-    fn name(&self) -> String;
-    fn columns(&self) -> Vec<ColumnDefinition>;
-    fn generate(&self, query_context: Option<String>) -> ExtensionResponse;
-}
-
-impl Plugin for TablePlugin {
-    fn name(&self) -> String {
-        self.details.name()
-    }
-
-    fn registry_name(&self) -> String {
-        "table".to_string()
-    }
-
-    fn routes(&self) -> ExtensionResponse {
-        let status = ExtensionStatus::new(0, "OK".to_string(), None);
-        let mut routes = vec![];
-
-        for column in self.details.columns() {
-            let mut map = BTreeMap::new();
-            map.insert("id".to_string(), "column".to_string());
-            map.insert("name".to_string(), column.column_name);
-            map.insert("type".to_string(), column.column_type.to_string());
-            map.insert("op".to_string(), "0".to_string());
-            routes.push(map);
-        }
-        ExtensionResponse::new(status, routes)
-    }
-
-    fn call(&self, ctx: ExtensionPluginRequest) -> ExtensionResponse {
-        if ctx.contains_key("action") == false {
-            let message = "Table plugins must include a request action".to_string();
-            let status = ExtensionStatus::new(1, message, None);
-            return ExtensionResponse::new(status, vec![])
-        }
-
-        let action = ctx.get("action").unwrap();
-        match action.as_str() {
-            "generate" => {
-                let mut constraint_ctx = None;
-                if ctx.contains_key("context") {
-                    constraint_ctx = Some(ctx.get("context").unwrap());
-                }
-
-                // BUGBUG: For now we always ignore the context constraints from the "context" property.
-                self.details.generate(None)
-            },
-            "columns" => {
-                self.routes()
-            },
-            _ => {
-                let status = ExtensionStatus::new(1, format!("Unknown action ('{}')", action), None);
-                ExtensionResponse::new(status, vec![])
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     extern crate std;
 
     struct TestTableDetails;
-    use ::Plugin;
-    use ::TablePluginDetails;
 
     impl ::TablePluginDetails for TestTableDetails {
         fn name(&self) -> String {
@@ -736,7 +373,7 @@ mod tests {
         use ::TablePlugin;
         use ::Plugin;
 
-        let table_plugin = Box::new(::TablePlugin { details: Box::new(TestTableDetails {}) });
+        let table_plugin = Box::new(::TablePlugin::new(Box::new(TestTableDetails {})));
 
         let mut extension_server = ::ExtensionManagerServer::new_with_path("test_thing123", "/Users/zbrown/.osquery/shell.em");
         extension_server.register_plugin(table_plugin);

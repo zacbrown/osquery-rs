@@ -3,6 +3,7 @@
 
 #![allow(unused_imports)]
 #![allow(unused_extern_crates)]
+#![allow(non_camel_case_types)]
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments, type_complexity))]
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
