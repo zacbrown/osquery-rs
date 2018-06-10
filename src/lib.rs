@@ -30,9 +30,11 @@ use local_server::*;
 pub mod config_plugin;
 pub use self::config_plugin::*;
 
+pub mod logger_plugin;
+pub use self::logger_plugin::*;
+
 pub mod table_plugin;
 pub use self::table_plugin::*;
-
 
 use std::collections::BTreeMap;
 use std::sync::{
@@ -263,11 +265,10 @@ impl ExtensionManagerServer {
         let mut reg_client = ExtensionManagerClient::new_with_path(&self.listen_path, None);
         let uuid = match reg_client.register_extension(info, registry) {
             Ok(response) => {
-                println!("{:#?}", response);
                 response.uuid
             }
             Err(e) => {
-                println!("{:#?}", e);
+                debug_println!("Error encountered while registering extension: {:?}", e);
                 None
             }
         };
@@ -313,6 +314,7 @@ impl ExtensionManagerServer {
             Ok(_) => {},
             Err(e) => {
                 println!("Extension failed to start with error: {}", e);
+                println!("{:#?}", e);
             }
         }
     }
@@ -366,8 +368,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_it() {
+    struct TestLoggerDetails;
+
+    impl ::LoggerPluginDetails for TestLoggerDetails {
+        fn name(&self) -> String {
+            "big_dumb_logger".to_string()
+        }
+
+        fn log_string(&self, msg: &str) -> ::osquery::ExtensionStatus {
+            println!("LOG_STRING: {}", msg);
+            ::osquery::ExtensionStatus::new(0, "OK".to_string(), None)
+        }
+
+        fn log_health(&self, msg: &str) -> ::osquery::ExtensionStatus {
+            println!("LOG_HEALTH: {}", msg);
+            ::osquery::ExtensionStatus::new(0, "OK".to_string(), None)
+
+        }
+
+        fn log_snapshot(&self, msg: &str) -> ::osquery::ExtensionStatus {
+            println!("LOG_SNAPSHOT: {}", msg);
+            ::osquery::ExtensionStatus::new(0, "OK".to_string(), None)
+        }
+    }
+
+    //#[test]
+    fn test_table() {
         use std::collections::BTreeMap;
         use ::osquery::TExtensionManagerSyncClient;
         use ::TablePlugin;
@@ -377,6 +403,20 @@ mod tests {
 
         let mut extension_server = ::ExtensionManagerServer::new_with_path("test_thing123", "/Users/zbrown/.osquery/shell.em");
         extension_server.register_plugin(table_plugin);
+        extension_server.run();
+    }
+
+    #[test]
+    fn test_logger() {
+        use std::collections::BTreeMap;
+        use ::osquery::TExtensionManagerSyncClient;
+        use ::LoggerPlugin;
+        use ::Plugin;
+
+        let logger_plugin = Box::new(::LoggerPlugin::new(Box::new(TestLoggerDetails {})));
+
+        let mut extension_server = ::ExtensionManagerServer::new_with_path("test_thing123", "/Users/zbrown/.osquery/shell.em");
+        extension_server.register_plugin(logger_plugin);
         extension_server.run();
     }
 }

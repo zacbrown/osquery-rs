@@ -12,6 +12,14 @@ pub trait LoggerPluginDetails: Sync + Send {
     fn log_snapshot(&self, &str) -> ExtensionStatus;
 }
 
+impl LoggerPlugin {
+    pub fn new(details: Box<LoggerPluginDetails>) -> Self {
+        Self {
+            details
+        }
+    }
+}
+
 impl Plugin for LoggerPlugin {
     fn name(&self) -> String {
         self.details.name()

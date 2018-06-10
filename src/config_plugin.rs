@@ -12,6 +12,14 @@ pub trait ConfigPluginDetails: Sync + Send {
     fn content(&self) -> ExtensionPluginResponse;
 }
 
+impl ConfigPlugin {
+    pub fn new(details: Box<ConfigPluginDetails>) -> Self {
+        Self {
+            details
+        }
+    }
+}
+
 impl Plugin for ConfigPlugin {
     fn name(&self) -> String {
         self.details.name()
