@@ -13,6 +13,7 @@ pub mod osquery;
 use std::collections::BTreeMap;
 use std::sync::{
     Arc,
+    Condvar,
     Mutex,
     MutexGuard
 };
@@ -65,6 +66,63 @@ mod sys {
 
     pub const DEFAULT_PIPE_PATH: &'static str = r#"\\.\pipe\osquery.em"#;
     // pub type TChannel = ...
+}
+
+#[derive(Clone)]
+pub struct StopSignal {
+    signal: Arc<(Mutex<bool>, Condvar)>,
+}
+
+impl StopSignal {
+    pub fn new() -> Self {
+        Self {
+            signal: Arc::new((Mutex::new(false), Condvar::new()))
+        }
+    }
+
+    pub fn wait(&self) {
+        let &(ref lock, ref cvar) = &*self.signal;
+        let mut finished = lock.lock().unwrap();
+        while !*finished {
+            finished = match cvar.wait(finished) {
+                Ok(f) => f,
+                Err(_) => { break } // wire this up to the Health API
+            }
+        }
+    }
+
+    pub fn wait_timeout(&self, duration: std::time::Duration) -> bool {
+        let &(ref lock, ref cvar) = &*self.signal;
+        let mut finished = lock.lock().unwrap();
+        let mut signaled = false;
+        while !*finished {
+            finished = match cvar.wait_timeout(finished, duration) {
+                Ok((done, timeout_result)) => {
+                    if timeout_result.timed_out() {
+                        break
+                    }
+                    signaled = true;
+                    done
+                },
+                Err(_) => { break } // wire this up to the Health API
+            }
+        }
+
+        signaled
+    }
+
+    pub fn done(&self) {
+        let &(ref lock, ref cvar) = &*self.signal;
+        let mut finished = lock.lock().unwrap();
+        *finished = true;
+        cvar.notify_all();
+    }
+
+    pub fn reset(&self) {
+        let &(ref lock, _) = &*self.signal;
+        let mut finished = lock.lock().unwrap();
+        *finished = false;
+    }
 }
 
 type ProtocolIn = TBinaryInputProtocol<TBufferedReadTransport<sys::TChannel>>;
@@ -246,8 +304,9 @@ impl<PRC, RTF, IPF, WTF, OPF> TServer<PRC, RTF, IPF, WTF, OPF>
         }
     }
 
-    pub fn listen(&mut self, listen_address: &str) -> thrift::Result<()> {
-        let listener = Self::bind(listen_address)?;
+    pub fn listen(&mut self, listen_address: &str, done: StopSignal) -> thrift::Result<()> {
+        let mut listener = Self::bind(listen_address)?;
+        listener.set_nonblocking(true);
         for stream in listener.incoming() {
             match stream {
                 Ok(s) => {
@@ -257,8 +316,11 @@ impl<PRC, RTF, IPF, WTF, OPF> TServer<PRC, RTF, IPF, WTF, OPF>
                         .execute(move || handle_incoming_connection(processor, i_prot, o_prot),);
                 }
                 Err(e) => {
-                    println!("WARN: failed to accept remote connection with error {:?}", e);
+                    //println!("WARN: failed to accept remote connection with error {:?}", e);
                 }
+            }
+            if done.wait_timeout(std::time::Duration::from_millis(100)) {
+                break
             }
         }
 
@@ -306,7 +368,7 @@ fn handle_incoming_connection<PRC>(
     loop {
         let r = processor.process(&mut *i_prot, &mut *o_prot);
         if let Err(e) = r {
-            println!("WARN: processor completed with error: {:?}", e);
+            //println!("WARN: processor completed with error: {:?}", e);
             break;
         }
     }
@@ -392,7 +454,7 @@ impl ExtensionManagerServer {
             }
             Err(e) => {
                 println!("{:#?}", e);
-                panic!("blah");
+                None
             }
         };
 
@@ -412,19 +474,30 @@ impl ExtensionManagerServer {
             3
         );
 
-        println!("listen path: {}", listen_path);
-        const SLEEP_MS: u32 = 750;
-        for ii in 0..10 {
-            match server.listen(&listen_path) {
-                Ok(_) => break,
-                Err(e) => {
-                    if ii == 9 {
-                        println!("Unable to make a connection to the socket address :( -- {}", listen_path);
-                    } else {
-                        println!("Failed to connect to listen socket ({}), attempting again in {} millisecond.", listen_path, SLEEP_MS);
-                        std::thread::sleep_ms(SLEEP_MS);
+        let done = StopSignal::new();
+        let watcher_done = done.clone();
+        let watcher_listen_path = self.listen_path.clone();
+        std::thread::spawn(move || {
+            let mut client = ExtensionManagerClient::new_with_path(&watcher_listen_path, None);
+
+            loop {
+                match client.ping() {
+                    Ok(_) => {},
+                    Err(_) => {
+                        watcher_done.done();
+                        break
                     }
                 }
+
+                std::thread::sleep_ms(500);
+            }
+        });
+
+        println!("Starting extension, listening on: {}", listen_path);
+        match server.listen(&listen_path, done) {
+            Ok(_) => {},
+            Err(e) => {
+                println!("Extension failed to start with error: {}", e);
             }
         }
     }
@@ -668,6 +741,5 @@ mod tests {
         let mut extension_server = ::ExtensionManagerServer::new_with_path("test_thing123", "/Users/zbrown/.osquery/shell.em");
         extension_server.register_plugin(table_plugin);
         extension_server.run();
-        //std::thread::sleep_ms(5000);
     }
 }
