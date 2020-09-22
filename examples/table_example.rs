@@ -43,10 +43,10 @@ fn main() {
     let table_plugin = Box::new(osquery_rs::TablePlugin::new(Box::new(TableDetails {})));
 
     // For Testing
-    //let mut extension_server = osquery_rs::ExtensionManagerServer::new_with_path("rust_event_tables", "/Users/mgrenier/shell.em");
+    let mut extension_server = osquery_rs::ExtensionManagerServer::new_with_path("rust_event_tables", "/Users/mgrenier/shell.em");
     
     // For production
-    let mut extension_server = osquery_rs::ExtensionManagerServer::new_with_path("rust_event_tables", "/tmp/osquery.em");
+    //let mut extension_server = osquery_rs::ExtensionManagerServer::new("rust_event_tables");
     extension_server.register_plugin(table_plugin);
     extension_server.run();
 }

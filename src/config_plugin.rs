@@ -4,7 +4,7 @@ use osquery::*;
 use ::Plugin;
 
 pub struct ConfigPlugin {
-    details: Box<ConfigPluginDetails>,
+    details: Box<dyn ConfigPluginDetails>,
 }
 
 pub trait ConfigPluginDetails: Sync + Send {
@@ -13,7 +13,7 @@ pub trait ConfigPluginDetails: Sync + Send {
 }
 
 impl ConfigPlugin {
-    pub fn new(details: Box<ConfigPluginDetails>) -> Self {
+    pub fn new(details: Box<dyn ConfigPluginDetails>) -> Self {
         Self {
             details
         }

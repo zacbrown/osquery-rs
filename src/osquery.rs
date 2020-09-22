@@ -39,10 +39,10 @@ pub enum ExtensionCode {
 }
 
 impl ExtensionCode {
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     o_prot.write_i32(*self as i32)
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionCode> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionCode> {
     let enum_value = i_prot.read_i32()?;
     ExtensionCode::try_from(enum_value)  }
 }
@@ -100,7 +100,7 @@ impl InternalOptionInfo {
       type_: type_.into(),
     }
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<InternalOptionInfo> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<InternalOptionInfo> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<String> = Some("".to_owned());
     let mut f_2: Option<String> = Some("".to_owned());
@@ -138,7 +138,7 @@ impl InternalOptionInfo {
     };
     Ok(ret)
   }
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("InternalOptionInfo");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.value {
@@ -201,7 +201,7 @@ impl InternalExtensionInfo {
       min_sdk_version: min_sdk_version.into(),
     }
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<InternalExtensionInfo> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<InternalExtensionInfo> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<String> = Some("".to_owned());
     let mut f_2: Option<String> = Some("".to_owned());
@@ -245,7 +245,7 @@ impl InternalExtensionInfo {
     };
     Ok(ret)
   }
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("InternalExtensionInfo");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.name {
@@ -315,7 +315,7 @@ impl ExtensionStatus {
       uuid: uuid.into(),
     }
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionStatus> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionStatus> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<i32> = Some(0);
     let mut f_2: Option<String> = Some("".to_owned());
@@ -353,7 +353,7 @@ impl ExtensionStatus {
     };
     Ok(ret)
   }
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ExtensionStatus");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(fld_var) = self.code {
@@ -412,7 +412,7 @@ impl ExtensionResponse {
       response: response.into(),
     }
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionResponse> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionResponse> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<ExtensionStatus> = None;
     let mut f_2: Option<ExtensionPluginResponse> = Some(Vec::new());
@@ -457,7 +457,7 @@ impl ExtensionResponse {
     };
     Ok(ret)
   }
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ExtensionResponse");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.status {
@@ -518,7 +518,7 @@ impl ExtensionException {
       uuid: uuid.into(),
     }
   }
-  pub fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionException> {
+  pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionException> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<i32> = Some(0);
     let mut f_2: Option<String> = Some("".to_owned());
@@ -556,7 +556,7 @@ impl ExtensionException {
     };
     Ok(ret)
   }
-  pub fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ExtensionException");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(fld_var) = self.code {
@@ -612,7 +612,7 @@ impl From<ExtensionException> for thrift::Error {
 
 impl Display for ExtensionException {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-    self.description().fmt(f)
+    self.to_string().fmt(f)
   }
 }
 
@@ -641,8 +641,8 @@ impl <IP, OP> ExtensionSyncClient<IP, OP> where IP: TInputProtocol, OP: TOutputP
 }
 
 impl <IP, OP> TThriftClient for ExtensionSyncClient<IP, OP> where IP: TInputProtocol, OP: TOutputProtocol {
-  fn i_prot_mut(&mut self) -> &mut TInputProtocol { &mut self._i_prot }
-  fn o_prot_mut(&mut self) -> &mut TOutputProtocol { &mut self._o_prot }
+  fn i_prot_mut(&mut self) -> &mut dyn TInputProtocol { &mut self._i_prot }
+  fn o_prot_mut(&mut self) -> &mut dyn TOutputProtocol { &mut self._o_prot }
   fn sequence_number(&self) -> i32 { self._sequence_number }
   fn increment_sequence_number(&mut self) -> i32 { self._sequence_number += 1; self._sequence_number }
 }
@@ -753,13 +753,13 @@ impl <H: ExtensionSyncHandler> ExtensionSyncProcessor<H> {
       handler: handler,
     }
   }
-  fn process_ping(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_ping(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_ping(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_call(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_call(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_call(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_shutdown(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_shutdown(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_shutdown(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
 }
@@ -767,7 +767,7 @@ impl <H: ExtensionSyncHandler> ExtensionSyncProcessor<H> {
 pub struct TExtensionProcessFunctions;
 
 impl TExtensionProcessFunctions {
-  pub fn process_ping<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_ping<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let _ = PingArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_ping() {
       Ok(handler_return) => {
@@ -791,7 +791,7 @@ impl TExtensionProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("ping", TMessageType::Exception, incoming_sequence_number);
@@ -804,7 +804,7 @@ impl TExtensionProcessFunctions {
       },
     }
   }
-  pub fn process_call<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_call<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let args = CallArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_call(args.registry, args.item, args.request) {
       Ok(handler_return) => {
@@ -828,7 +828,7 @@ impl TExtensionProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("call", TMessageType::Exception, incoming_sequence_number);
@@ -841,7 +841,7 @@ impl TExtensionProcessFunctions {
       },
     }
   }
-  pub fn process_shutdown<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_shutdown<H: ExtensionSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let _ = ShutdownArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_shutdown() {
       Ok(_) => {
@@ -865,7 +865,7 @@ impl TExtensionProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("shutdown", TMessageType::Exception, incoming_sequence_number);
@@ -881,7 +881,7 @@ impl TExtensionProcessFunctions {
 }
 
 impl <H: ExtensionSyncHandler> TProcessor for ExtensionSyncProcessor<H> {
-  fn process(&self, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process(&self, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let message_ident = i_prot.read_message_begin()?;
     let res = match &*message_ident.name {
       "ping" => {
@@ -917,7 +917,7 @@ struct PingArgs {
 }
 
 impl PingArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<PingArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<PingArgs> {
     i_prot.read_struct_begin()?;
     loop {
       let field_ident = i_prot.read_field_begin()?;
@@ -936,7 +936,7 @@ impl PingArgs {
     let ret = PingArgs {};
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ping_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_stop()?;
@@ -954,7 +954,7 @@ struct PingResult {
 }
 
 impl PingResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<PingResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<PingResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionStatus> = None;
     loop {
@@ -980,7 +980,7 @@ impl PingResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("PingResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -1022,7 +1022,7 @@ struct CallArgs {
 }
 
 impl CallArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<CallArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<CallArgs> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<String> = None;
     let mut f_2: Option<String> = None;
@@ -1070,7 +1070,7 @@ impl CallArgs {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("call_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_begin(&TFieldIdentifier::new("registry", TType::String, 1))?;
@@ -1102,7 +1102,7 @@ struct CallResult {
 }
 
 impl CallResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<CallResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<CallResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionResponse> = None;
     loop {
@@ -1128,7 +1128,7 @@ impl CallResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("CallResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -1167,7 +1167,7 @@ struct ShutdownArgs {
 }
 
 impl ShutdownArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ShutdownArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ShutdownArgs> {
     i_prot.read_struct_begin()?;
     loop {
       let field_ident = i_prot.read_field_begin()?;
@@ -1186,7 +1186,7 @@ impl ShutdownArgs {
     let ret = ShutdownArgs {};
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("shutdown_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_stop()?;
@@ -1203,7 +1203,7 @@ struct ShutdownResult {
 }
 
 impl ShutdownResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ShutdownResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ShutdownResult> {
     i_prot.read_struct_begin()?;
     loop {
       let field_ident = i_prot.read_field_begin()?;
@@ -1222,7 +1222,7 @@ impl ShutdownResult {
     let ret = ShutdownResult {};
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ShutdownResult");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_stop()?;
@@ -1261,8 +1261,8 @@ impl <IP, OP> ExtensionManagerSyncClient<IP, OP> where IP: TInputProtocol, OP: T
 }
 
 impl <IP, OP> TThriftClient for ExtensionManagerSyncClient<IP, OP> where IP: TInputProtocol, OP: TOutputProtocol {
-  fn i_prot_mut(&mut self) -> &mut TInputProtocol { &mut self._i_prot }
-  fn o_prot_mut(&mut self) -> &mut TOutputProtocol { &mut self._o_prot }
+  fn i_prot_mut(&mut self) -> &mut dyn TInputProtocol { &mut self._i_prot }
+  fn o_prot_mut(&mut self) -> &mut dyn TOutputProtocol { &mut self._o_prot }
   fn sequence_number(&self) -> i32 { self._sequence_number }
   fn increment_sequence_number(&mut self) -> i32 { self._sequence_number += 1; self._sequence_number }
 }
@@ -1458,31 +1458,31 @@ impl <H: ExtensionManagerSyncHandler> ExtensionManagerSyncProcessor<H> {
       handler: handler,
     }
   }
-  fn process_extensions(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_extensions(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_extensions(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_options(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_options(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_options(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_register_extension(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_register_extension(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_register_extension(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_deregister_extension(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_deregister_extension(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_deregister_extension(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_query(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_query(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_query(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_get_query_columns(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_get_query_columns(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionManagerProcessFunctions::process_get_query_columns(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_ping(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_ping(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_ping(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_call(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_call(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_call(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
-  fn process_shutdown(&self, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process_shutdown(&self, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     TExtensionProcessFunctions::process_shutdown(&self.handler, incoming_sequence_number, i_prot, o_prot)
   }
 }
@@ -1490,7 +1490,7 @@ impl <H: ExtensionManagerSyncHandler> ExtensionManagerSyncProcessor<H> {
 pub struct TExtensionManagerProcessFunctions;
 
 impl TExtensionManagerProcessFunctions {
-  pub fn process_extensions<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_extensions<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let _ = ExtensionsArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_extensions() {
       Ok(handler_return) => {
@@ -1514,7 +1514,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("extensions", TMessageType::Exception, incoming_sequence_number);
@@ -1527,7 +1527,7 @@ impl TExtensionManagerProcessFunctions {
       },
     }
   }
-  pub fn process_options<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_options<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let _ = OptionsArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_options() {
       Ok(handler_return) => {
@@ -1551,7 +1551,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("options", TMessageType::Exception, incoming_sequence_number);
@@ -1564,7 +1564,7 @@ impl TExtensionManagerProcessFunctions {
       },
     }
   }
-  pub fn process_register_extension<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_register_extension<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let args = RegisterExtensionArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_register_extension(args.info, args.registry) {
       Ok(handler_return) => {
@@ -1588,7 +1588,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("registerExtension", TMessageType::Exception, incoming_sequence_number);
@@ -1601,7 +1601,7 @@ impl TExtensionManagerProcessFunctions {
       },
     }
   }
-  pub fn process_deregister_extension<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_deregister_extension<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let args = DeregisterExtensionArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_deregister_extension(args.uuid) {
       Ok(handler_return) => {
@@ -1625,7 +1625,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("deregisterExtension", TMessageType::Exception, incoming_sequence_number);
@@ -1638,7 +1638,7 @@ impl TExtensionManagerProcessFunctions {
       },
     }
   }
-  pub fn process_query<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_query<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let args = QueryArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_query(args.sql) {
       Ok(handler_return) => {
@@ -1662,7 +1662,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("query", TMessageType::Exception, incoming_sequence_number);
@@ -1675,7 +1675,7 @@ impl TExtensionManagerProcessFunctions {
       },
     }
   }
-  pub fn process_get_query_columns<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  pub fn process_get_query_columns<H: ExtensionManagerSyncHandler>(handler: &H, incoming_sequence_number: i32, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let args = GetQueryColumnsArgs::read_from_in_protocol(i_prot)?;
     match handler.handle_get_query_columns(args.sql) {
       Ok(handler_return) => {
@@ -1699,7 +1699,7 @@ impl TExtensionManagerProcessFunctions {
             let ret_err = {
               ApplicationError::new(
                 ApplicationErrorKind::Unknown,
-                e.description()
+                e.to_string()
               )
             };
             let message_ident = TMessageIdentifier::new("getQueryColumns", TMessageType::Exception, incoming_sequence_number);
@@ -1715,7 +1715,7 @@ impl TExtensionManagerProcessFunctions {
 }
 
 impl <H: ExtensionManagerSyncHandler> TProcessor for ExtensionManagerSyncProcessor<H> {
-  fn process(&self, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn process(&self, i_prot: &mut dyn TInputProtocol, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let message_ident = i_prot.read_message_begin()?;
     let res = match &*message_ident.name {
       "extensions" => {
@@ -1769,7 +1769,7 @@ struct ExtensionsArgs {
 }
 
 impl ExtensionsArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionsArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionsArgs> {
     i_prot.read_struct_begin()?;
     loop {
       let field_ident = i_prot.read_field_begin()?;
@@ -1788,7 +1788,7 @@ impl ExtensionsArgs {
     let ret = ExtensionsArgs {};
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("extensions_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_stop()?;
@@ -1806,7 +1806,7 @@ struct ExtensionsResult {
 }
 
 impl ExtensionsResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<ExtensionsResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<ExtensionsResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<InternalExtensionList> = None;
     loop {
@@ -1839,7 +1839,7 @@ impl ExtensionsResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("ExtensionsResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -1883,7 +1883,7 @@ struct OptionsArgs {
 }
 
 impl OptionsArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<OptionsArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<OptionsArgs> {
     i_prot.read_struct_begin()?;
     loop {
       let field_ident = i_prot.read_field_begin()?;
@@ -1902,7 +1902,7 @@ impl OptionsArgs {
     let ret = OptionsArgs {};
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("options_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_stop()?;
@@ -1920,7 +1920,7 @@ struct OptionsResult {
 }
 
 impl OptionsResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<OptionsResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<OptionsResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<InternalOptionList> = None;
     loop {
@@ -1953,7 +1953,7 @@ impl OptionsResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("OptionsResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -1999,7 +1999,7 @@ struct RegisterExtensionArgs {
 }
 
 impl RegisterExtensionArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<RegisterExtensionArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<RegisterExtensionArgs> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<InternalExtensionInfo> = None;
     let mut f_2: Option<ExtensionRegistry> = None;
@@ -2060,7 +2060,7 @@ impl RegisterExtensionArgs {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("registerExtension_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_begin(&TFieldIdentifier::new("info", TType::Struct, 1))?;
@@ -2103,7 +2103,7 @@ struct RegisterExtensionResult {
 }
 
 impl RegisterExtensionResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<RegisterExtensionResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<RegisterExtensionResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionStatus> = None;
     loop {
@@ -2129,7 +2129,7 @@ impl RegisterExtensionResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("RegisterExtensionResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -2169,7 +2169,7 @@ struct DeregisterExtensionArgs {
 }
 
 impl DeregisterExtensionArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<DeregisterExtensionArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<DeregisterExtensionArgs> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<ExtensionRouteUUID> = None;
     loop {
@@ -2196,7 +2196,7 @@ impl DeregisterExtensionArgs {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("deregisterExtension_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_begin(&TFieldIdentifier::new("uuid", TType::I64, 1))?;
@@ -2217,7 +2217,7 @@ struct DeregisterExtensionResult {
 }
 
 impl DeregisterExtensionResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<DeregisterExtensionResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<DeregisterExtensionResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionStatus> = None;
     loop {
@@ -2243,7 +2243,7 @@ impl DeregisterExtensionResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("DeregisterExtensionResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -2283,7 +2283,7 @@ struct QueryArgs {
 }
 
 impl QueryArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<QueryArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<QueryArgs> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<String> = None;
     loop {
@@ -2310,7 +2310,7 @@ impl QueryArgs {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("query_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_begin(&TFieldIdentifier::new("sql", TType::String, 1))?;
@@ -2331,7 +2331,7 @@ struct QueryResult {
 }
 
 impl QueryResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<QueryResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<QueryResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionResponse> = None;
     loop {
@@ -2357,7 +2357,7 @@ impl QueryResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("QueryResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {
@@ -2397,7 +2397,7 @@ struct GetQueryColumnsArgs {
 }
 
 impl GetQueryColumnsArgs {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<GetQueryColumnsArgs> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<GetQueryColumnsArgs> {
     i_prot.read_struct_begin()?;
     let mut f_1: Option<String> = None;
     loop {
@@ -2424,7 +2424,7 @@ impl GetQueryColumnsArgs {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("getQueryColumns_args");
     o_prot.write_struct_begin(&struct_ident)?;
     o_prot.write_field_begin(&TFieldIdentifier::new("sql", TType::String, 1))?;
@@ -2445,7 +2445,7 @@ struct GetQueryColumnsResult {
 }
 
 impl GetQueryColumnsResult {
-  fn read_from_in_protocol(i_prot: &mut TInputProtocol) -> thrift::Result<GetQueryColumnsResult> {
+  fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<GetQueryColumnsResult> {
     i_prot.read_struct_begin()?;
     let mut f_0: Option<ExtensionResponse> = None;
     loop {
@@ -2471,7 +2471,7 @@ impl GetQueryColumnsResult {
     };
     Ok(ret)
   }
-  fn write_to_out_protocol(&self, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {
+  fn write_to_out_protocol(&self, o_prot: &mut dyn TOutputProtocol) -> thrift::Result<()> {
     let struct_ident = TStructIdentifier::new("GetQueryColumnsResult");
     o_prot.write_struct_begin(&struct_ident)?;
     if let Some(ref fld_var) = self.result_value {

@@ -113,7 +113,7 @@ impl<PRC, RTF, IPF, WTF, OPF> LocalServer<PRC, RTF, IPF, WTF, OPF>
     fn new_protocols_for_connection(
         &mut self,
         stream: super::sys::TChannel,
-    ) -> thrift::Result<(Box<TInputProtocol + Send>, Box<TOutputProtocol + Send>)> {
+    ) -> thrift::Result<(Box<dyn TInputProtocol + Send>, Box<dyn TOutputProtocol + Send>)> {
         // split it into two - one to be owned by the
         // input tran/proto and the other by the output
         let w_chan = stream.try_clone()?;
@@ -133,8 +133,8 @@ impl<PRC, RTF, IPF, WTF, OPF> LocalServer<PRC, RTF, IPF, WTF, OPF>
 
 fn handle_incoming_connection<PRC>(
     processor: Arc<PRC>,
-    i_prot: Box<TInputProtocol>,
-    o_prot: Box<TOutputProtocol>,
+    i_prot: Box<dyn TInputProtocol>,
+    o_prot: Box<dyn TOutputProtocol>,
 ) where
     PRC: TProcessor,
 {
