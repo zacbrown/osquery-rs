@@ -146,7 +146,7 @@ impl ExtensionManagerClient {
     }
 }
 
-type InternalExtensionPluginRegistry = BTreeMap<String, BTreeMap<String, Box<Plugin>>>;
+type InternalExtensionPluginRegistry = BTreeMap<String, BTreeMap<String, Box<dyn Plugin>>>;
 
 pub struct ExtensionClientHandler {
     registry: Arc<Mutex<InternalExtensionPluginRegistry>>,
@@ -235,7 +235,7 @@ impl ExtensionManagerServer {
         registry
     }
 
-    pub fn register_plugin(&mut self, plugin: Box<Plugin>) {
+    pub fn register_plugin(&mut self, plugin: Box<dyn Plugin>) {
         if self.registry.contains_key(&plugin.registry_name()) == false {
             panic!("Unsupported plugin type '{}'", plugin.registry_name());
         }

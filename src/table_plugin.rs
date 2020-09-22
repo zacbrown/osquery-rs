@@ -29,7 +29,7 @@ pub struct ColumnDefinition {
 }
 
 pub struct TablePlugin {
-    details: Box<TablePluginDetails>,
+    details: Box<dyn TablePluginDetails>,
 }
 
 pub trait TablePluginDetails: Sync + Send {
@@ -39,7 +39,7 @@ pub trait TablePluginDetails: Sync + Send {
 }
 
 impl TablePlugin {
-    pub fn new(details: Box<TablePluginDetails>) -> Self {
+    pub fn new(details: Box<dyn TablePluginDetails>) -> Self {
         Self {
             details
         }

@@ -2,7 +2,7 @@ use ::Plugin;
 use osquery::*;
 
 pub struct LoggerPlugin {
-    details: Box<LoggerPluginDetails>,
+    details: Box<dyn LoggerPluginDetails>,
 }
 
 pub trait LoggerPluginDetails: Sync + Send {
@@ -13,7 +13,7 @@ pub trait LoggerPluginDetails: Sync + Send {
 }
 
 impl LoggerPlugin {
-    pub fn new(details: Box<LoggerPluginDetails>) -> Self {
+    pub fn new(details: Box<dyn LoggerPluginDetails>) -> Self {
         Self {
             details
         }
